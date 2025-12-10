@@ -8,19 +8,19 @@ import (
 )
 
 type Env struct {
-	DB_NAME     string `env:"DB_NAME"`
-	DB_USERNAME string `env:"DB_USERNAME"`
-	DB_PASSWORD string `env:"DB_PASSWORD"`
-	DB_PORT     int    `env:"DB_PORT"`
-	DB_HOST     string `env:"DB_HOST"`
-	IpAddress   string `env:"IP_ADDRESS"`
-	API_PORT    int    `env:"API_PORT"`
+	DbName     string `env:"DB_NAME"`
+	DbUsername string `env:"DB_USERNAME"`
+	DbPassword string `env:"DB_PASSWORD"`
+	DbPort     int    `env:"DB_PORT"`
+	DbHost     string `env:"DB_HOST"`
+	IpAddress  string `env:"IP_ADDRESS"`
+	ApiPort    int    `env:"API_PORT"`
 
 	Environment string `env:"ENVIRONMENT"`
 }
 
 type Config struct {
-	Env    Env `env:"ENVIRONMENT"`
+	Env    Env
 	Client *pgxpool.Pool
 }
 
@@ -33,7 +33,7 @@ func GetConfig() *Config {
 }
 
 func GetEnv() *Env {
-	err := godotenv.Load()
+	err := godotenv.Load("config.env")
 	if err != nil {
 		slog.Warn("Error loading .env file")
 	}
