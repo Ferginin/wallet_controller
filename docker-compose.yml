@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: Wallet_controller
+    env_file:
+      - config.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - wallet_controller_network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: wallet_controller_db
+    environment:
+      - POSTGRES_DB=wallet_controller_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./iternal/storage/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - wallet_controller_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  wallet_controller_network:
+    driver: bridge
