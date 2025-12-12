@@ -35,13 +35,13 @@ func GetConfig() *Config {
 func GetEnv() *Env {
 	err := godotenv.Load("config.env")
 	if err != nil {
-		slog.Warn("Error loading .env file")
+		slog.Warn("Error loading .env file", err.Error())
 	}
 
 	var cfg Env
 	err = env.Parse(&cfg)
 	if err != nil {
-		slog.Error("Error parsing .env file:", err.Error(), nil)
+		slog.Error("Error parsing .env file:", err.Error())
 		panic(err)
 	}
 

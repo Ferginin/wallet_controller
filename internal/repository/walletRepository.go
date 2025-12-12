@@ -11,11 +11,16 @@ import (
 	"wallet_controller/internal/entity"
 )
 
+type WalletRepositoryInterface interface {
+	GetByID(ctx context.Context, walletID uuid.UUID) (*entity.Wallet, error)
+	AddOperation(ctx context.Context, walletID uuid.UUID, operationType string, amount int) (entity.Wallet, error)
+}
+
 type WalletRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewWalletRepository(db *pgxpool.Pool) *WalletRepository {
+func NewWalletRepository(db *pgxpool.Pool) WalletRepositoryInterface {
 	return &WalletRepository{db: db}
 }
 
@@ -35,32 +40,32 @@ func (r *WalletRepository) GetByID(ctx context.Context, walletID uuid.UUID) (*en
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("wallet not found")
 		}
-		return nil, fmt.Errorf("failed to get wallet: %w", err)
+		return nil, fmt.Errorf("failed to get wallet: %w", err.Error())
 	}
 
 	return &wallet, err
 }
 
-func (r *WalletRepository) AddOperation(ctx context.Context, walletID uuid.UUID, operationType string, amount int) (*entity.Wallet, error) {
+func (r *WalletRepository) AddOperation(ctx context.Context, walletID uuid.UUID, operationType string, amount int) (entity.Wallet, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return entity.Wallet{}, err
 	}
 	defer tx.Rollback(ctx)
 
 	balance := 0
 	err = tx.QueryRow(ctx,
-		`SELECT balance FROM wallets WHERE id_wallet = $1`,
+		`SELECT balance FROM wallets WHERE id_wallet = $1 FOR UPDATE NOWAIT`,
 		walletID,
 	).Scan(&balance)
 	if err != nil {
-		slog.Error("failed to get wallet balance", err)
-		return nil, err
+		slog.Error("failed to get wallet balance", err.Error())
+		return entity.Wallet{}, err
 	}
 
 	if operationType == "WITHDRAW" && balance-amount < 0 {
 		slog.Warn("Not enough money on wallet:", walletID)
-		return nil, errors.New("not enough money on wallet")
+		return entity.Wallet{}, errors.New("not enough money on wallet")
 	} else if operationType == "WITHDRAW" {
 		balance -= amount
 	} else {
@@ -75,8 +80,8 @@ func (r *WalletRepository) AddOperation(ctx context.Context, walletID uuid.UUID,
 		amount,
 	)
 	if err != nil {
-		slog.Error("failed to insert wallet operation:", err)
-		return nil, err
+		slog.Error("failed to insert wallet operation:", err.Error())
+		return entity.Wallet{}, err
 	}
 
 	_, err = tx.Exec(ctx,
@@ -87,13 +92,19 @@ func (r *WalletRepository) AddOperation(ctx context.Context, walletID uuid.UUID,
 		walletID,
 	)
 	if err != nil {
-		slog.Error("failed to update wallet operation:", err)
-		return nil, err
+		slog.Error("failed to update wallet operation:", err.Error())
+		return entity.Wallet{}, err
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		slog.Error("failed to commit wallet operation:", err.Error())
+		return entity.Wallet{}, err
 	}
 
-	return &(entity.Wallet{
+	return entity.Wallet{
 			ID:      walletID,
 			Balance: balance,
-		}),
-		tx.Commit(ctx)
+		},
+		nil
+
 }

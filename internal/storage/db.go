@@ -9,17 +9,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-//go:embed init.sql
+//go:embed 01-init.sql
 var initSQL string
 
-//go:embed data.sql
+//go:embed 02-data.sql
 var dataSQL string
 
 func Migrate(db *pgxpool.Pool) error {
 	_, err := db.Exec(context.Background(), initSQL)
 	if err != nil {
-		slog.Error("Init DB Error: ", err)
-		return fmt.Errorf("init sql failed: %w", err)
+		slog.Error("Init DB Error: ", err.Error(), nil)
+		return fmt.Errorf("init sql failed: %s", err.Error())
 	}
 
 	return nil
@@ -28,8 +28,8 @@ func Migrate(db *pgxpool.Pool) error {
 func DataInsert(db *pgxpool.Pool) error {
 	_, err := db.Exec(context.Background(), dataSQL)
 	if err != nil {
-		slog.Error("Data Insert Error: ", err)
-		return fmt.Errorf("data insert failed: %w", err)
+		slog.Error("Data Insert Error: ", err.Error(), nil)
+		return fmt.Errorf("data insert failed: %s", err.Error())
 	}
 	return nil
 }

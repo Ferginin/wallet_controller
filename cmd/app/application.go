@@ -18,6 +18,7 @@ func StartApplication(ctx context.Context) error {
 	slog.Info("Starting application")
 
 	cfg.Client = storage.NewConnection(ctx, cfg)
+	defer cfg.Client.Close()
 
 	r := router.SetupRouter(ctx, cfg)
 
@@ -26,16 +27,16 @@ func StartApplication(ctx context.Context) error {
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      r,
-		WriteTimeout: time.Second * 15,
-		ReadTimeout:  time.Second * 15,
+		WriteTimeout: time.Second * 30,
+		ReadTimeout:  time.Second * 30,
 		IdleTimeout:  time.Second * 60,
 	}
 
 	go func() {
-		slog.Info("Starting http server")
+		slog.Info("Starting http server on", "address", addr)
 
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("failed to start server", err.Error())
+			slog.Error("failed to start server", err.Error(), nil)
 			panic(err)
 		}
 	}()
@@ -43,7 +44,7 @@ func StartApplication(ctx context.Context) error {
 	<-ctx.Done()
 	slog.Info("Shutting down application")
 	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("failed to shutdown server", err.Error())
+		slog.Error("failed to shutdown server", err.Error(), nil)
 		panic(err)
 	}
 	return nil
