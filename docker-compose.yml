@@ -11,7 +11,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - wallet_controller_network
     restart: unless-stopped
@@ -27,10 +28,17 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./iternal/storage/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./internal/storage/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./internal/storage/02-data.sql:/docker-entrypoint-initdb.d/02-data.sql
     networks:
       - wallet_controller_network
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   postgres_data:
